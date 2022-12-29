@@ -6,7 +6,7 @@ import re
 # Open the file with the links in JSON format
 with open('json/links.json', 'r') as f:
     # Open a file to write the headers in JSON format
-    with open('headers.json', 'w') as g:
+    with open('json/headers.json', 'w') as g:
         # Read the lines from the file
         for line in f:
             # Load the line as a JSON object
