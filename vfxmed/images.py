@@ -4,12 +4,12 @@ from lxml import html
 import os
 
 # Create a folder to store the images
-image_folder = 'images'
+image_folder = 'vfxmed/images'
 if not os.path.exists(image_folder):
     os.makedirs(image_folder)
 
 # Open the file with the links in JSON format
-with open('json/links.json', 'r') as f:
+with open('vfxmed/json/links.json', 'r') as f:
     # Read the lines from the file
     for line in f:
         # Load the line as a JSON object
