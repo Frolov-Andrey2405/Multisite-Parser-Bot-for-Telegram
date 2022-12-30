@@ -1,6 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 import json
+from time import time
 
 # Set the base URL for the site
 base_url = "https://blendermarket.com/products?sort_sales=desc"
@@ -13,6 +14,7 @@ more_pages = True
 
 # Open the links.json file in write mode
 with open('blendermarket/json/links.json', 'w') as f:
+    time_start = time()
     while more_pages:
         # Send a GET request to the URL with the page number
         response = requests.get(f"{base_url}&page={page_number}")
@@ -22,12 +24,12 @@ with open('blendermarket/json/links.json', 'w') as f:
 
         # Find the blocks with the posts
         post_blocks = soup.find_all(
-            'div', class_='col-12 col-md-6 col-lg-3 mb-4')
+            'a', class_='text-nounderline text-nocolor')
 
         # Iterate through the post blocks
         for block in post_blocks:
             # Find the link to the product page
-            link = block.find('a')['href']
+            link = block['href']
 
             # Write the link to the links.json file
             f.write(json.dumps(

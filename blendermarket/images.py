@@ -28,13 +28,11 @@ for link in links:
     image_section = soup.find_all(
         'img', class_='img-fluid')
 
-    i = 0
-    for img in image_section:
-        i += 1
-        if i == 1:
-            img = requests.get(img['src'])
-            out = open(f"blendermarket\images\{i}.jpg", "wb")
-            out.write(img.content)
-            out.close()
-        else:
-            break
+    list_name_of_game = soup.find('title').get_text(strip=True).replace('/', ' ').replace('-', ' ').split()
+    name_of_game = '_'.join(list_name_of_game)
+    print(name_of_game)
+    img = requests.get(image_section[0]['src'])
+    out = open(f"blendermarket\\images\\{name_of_game}.jpg", "wb")
+    out.write(img.content)
+    out.close()
+
