@@ -19,7 +19,7 @@ stop_paginating = False
 unique_links = set()
 
 # Open a file to write the links in JSON format
-with open('json/links.json', 'w') as f:
+with open('vfxmed/json/links.json', 'w') as f:
     while not stop_paginating:
         # Send a GET request to the current page of the website
         response = requests.get(f'{base_url}{page_number}')
