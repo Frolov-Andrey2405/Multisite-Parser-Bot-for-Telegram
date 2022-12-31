@@ -28,11 +28,12 @@ for link in links:
     image_section = soup.find_all(
         'img', class_='img-fluid')
 
+    # Find the name of the game
     list_name_of_game = soup.find('title').get_text(strip=True).replace('/', ' ').replace('-', ' ').split()
-    name_of_game = '_'.join(list_name_of_game)
+    name_of_game = ' '.join(list_name_of_game[:-2])
     print(name_of_game)
+
     img = requests.get(image_section[0]['src'])
     out = open(f"blendermarket\\images\\{name_of_game}.jpg", "wb")
     out.write(img.content)
     out.close()
-
