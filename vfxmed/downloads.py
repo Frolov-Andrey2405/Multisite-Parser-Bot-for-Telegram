@@ -3,8 +3,9 @@ import requests
 from bs4 import BeautifulSoup
 import os
 
-# Function to sanitize file names by replacing any disallowed characters with an underscore
+
 def sanitize_file_name(file_name):
+    '''Function to sanitize file names by replacing any disallowed characters with an underscore'''
     return file_name.translate(str.maketrans('', '', '<>:"/|?*'))
 
 
@@ -33,11 +34,9 @@ for link in links:
         for element in links:
             if 'Filename:' in element.text:
                 download_link = element.a['href']
-                file_name = element.a.text
-                # Use the sanitize_file_name function to clean up the file name
-                file_name = sanitize_file_name(file_name)
-                # Save the link and file name to the downloads.json file
-                with open('vfxmed/json/downloads.json', 'a') as f:
+
+                # Save the link and file name to the download_link.json file
+                with open('vfxmed/json/download_link.json', 'a') as f:
                     f.write(json.dumps(
-                        {'link': download_link, 'file_name': file_name}))
+                        {'download_link': download_link}))
                     f.write('\n')
