@@ -7,21 +7,24 @@ import json
 
 FORBIDDEN_SYMBOLS = ('\\', '/', ':', '*', '?', '"', '<', '>', '|', ' ')
 
+
 async def read_links() -> list:
-    '''Чтение ссылок из файла в формате json'''
+    '''Reading links from a json format file'''
     with open('blendermarket/json/links.json', 'r') as f:
         links = f.readlines()
     return links
 
+
 def replace_forbidden_symbols_for_file_name(string: str, symbol: str) -> str:
-    '''Заменяет запрещённые символы в файле на symbol'''
+    '''Replaces forbidden characters in the file with symbol'''
     new_str = ''
     for symbol in string:
         new_str += '_' if symbol in FORBIDDEN_SYMBOLS else symbol
     return new_str
 
+
 async def load_image(client: httpx.AsyncClient, link: str, semaphore: Semaphore, file) -> None:
-    '''Загрузка изображений с сайта по ссылке'''
+    '''Downloading images from a link'''
 
     await semaphore.acquire()
     # Load the link as a JSON object
@@ -33,10 +36,11 @@ async def load_image(client: httpx.AsyncClient, link: str, semaphore: Semaphore,
     # Parse the HTML contents
     soup = BeautifulSoup(response.text, 'html.parser')
 
-    # Find the section with the images 
+    # Find the section with the images
     image_section = soup.find_all('img', class_='img-fluid')
 
-    name_of_game = replace_forbidden_symbols_for_file_name(soup.find('title').get_text(strip=True), '_')
+    name_of_game = replace_forbidden_symbols_for_file_name(
+        soup.find('title').get_text(strip=True), '_')
 
     url_on_image = image_section[0]['src'] if len(image_section) > 0 else None
 
@@ -44,12 +48,13 @@ async def load_image(client: httpx.AsyncClient, link: str, semaphore: Semaphore,
         'off_link': url,
         'name_of_tools': name_of_game,
         'url_on_image': url_on_image,
-        }) + '\n' )
+    }) + '\n')
 
     semaphore.release()
 
+
 async def main() -> None:
-    '''Создание тасков и загрузка изображений в асинхронном режиме'''
+    '''Creating Tasks and Downloading Images in Asynchronous Mode'''
     semaphore = Semaphore(20)
     client = httpx.AsyncClient()
     # Iterate through the links
@@ -59,4 +64,3 @@ async def main() -> None:
 
 if __name__ == '__main__':
     asyncio.run(main())
-    
