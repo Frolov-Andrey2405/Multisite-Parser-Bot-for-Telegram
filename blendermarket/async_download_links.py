@@ -9,6 +9,7 @@ from asyncio import Semaphore
 BASE_URL = "https://blendermarket.com/products"
 
 async def load_link(client: httpx.AsyncClient, file, page_number: int, semaphore: Semaphore) -> None:
+    '''Загрузка ссылок с сайта'''
     await semaphore.acquire()
 
     # Send a GET request to the URL with the page number
@@ -35,6 +36,7 @@ async def load_link(client: httpx.AsyncClient, file, page_number: int, semaphore
 
 
 async def main():
+    '''Создание тасков для асинхронного кода'''
     semaphore = Semaphore(20)
 
     # Open the links.json file in write mode

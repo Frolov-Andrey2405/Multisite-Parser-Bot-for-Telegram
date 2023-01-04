@@ -1,9 +1,9 @@
-import asyncio
+﻿import asyncio
 from asyncio import Semaphore
 from json import loads
 from bs4 import BeautifulSoup
-from time import time
 import httpx
+import json
 
 FORBIDDEN_SYMBOLS = ('\\', '/', ':', '*', '?', '"', '<', '>', '|', ' ')
 
@@ -20,7 +20,7 @@ def replace_forbidden_symbols_for_file_name(string: str, symbol: str) -> str:
         new_str += '_' if symbol in FORBIDDEN_SYMBOLS else symbol
     return new_str
 
-async def load_image(client: httpx.AsyncClient, link: str, semaphore: Semaphore) -> None:
+async def load_image(client: httpx.AsyncClient, link: str, semaphore: Semaphore, file) -> None:
     '''Загрузка изображений с сайта по ссылке'''
 
     await semaphore.acquire()
@@ -37,21 +37,25 @@ async def load_image(client: httpx.AsyncClient, link: str, semaphore: Semaphore)
     image_section = soup.find_all('img', class_='img-fluid')
 
     name_of_game = replace_forbidden_symbols_for_file_name(soup.find('title').get_text(strip=True), '_')
-    img = await client.get(image_section[0]['src'])
-    out = open(f"blendermarket\\images\\{name_of_game}.jpg", "wb")
-    out.write(img.content)
-    out.close()
+
+    url_on_image = image_section[0]['src'] if len(image_section) > 0 else None
+
+    file.write(json.dumps({
+        'off_link': url,
+        'name_of_tools': name_of_game,
+        'url_on_image': url_on_image,
+        }) + '\n' )
 
     semaphore.release()
 
 async def main() -> None:
-    start_time = time()
     '''Создание тасков и загрузка изображений в асинхронном режиме'''
     semaphore = Semaphore(20)
     client = httpx.AsyncClient()
     # Iterate through the links
-    tasks = [asyncio.create_task(load_image(client, link, semaphore)) for link in await read_links()]
-    await asyncio.gather(*tasks)
+    with open('blendermarket\\json\\blend.json', 'w') as file:
+        tasks = [asyncio.create_task(load_image(client, link, semaphore, file)) for link in await read_links()]
+        await asyncio.gather(*tasks)
 
 if __name__ == '__main__':
     asyncio.run(main())
