@@ -10,7 +10,7 @@ FORBIDDEN_SYMBOLS = ('\\', '/', ':', '*', '?', '"', '<', '>', '|', ' ')
 
 async def read_links() -> list:
     '''Reading links from a json format file'''
-    with open('blendermarket/json/links.json', 'r') as f:
+    with open('blendermarket/json/official_links.json', 'r') as f:
         links = f.readlines()
     return links
 
@@ -58,9 +58,33 @@ async def main() -> None:
     semaphore = Semaphore(20)
     client = httpx.AsyncClient()
     # Iterate through the links
-    with open('blendermarket\\json\\blend.json', 'w') as file:
+    with open('blendermarket/json/blend.json', 'w') as file:
         tasks = [asyncio.create_task(load_image(client, link, semaphore, file)) for link in await read_links()]
         await asyncio.gather(*tasks)
 
 if __name__ == '__main__':
     asyncio.run(main())
+
+'''
+
+This code is an asynchronous script for downloading images from 
+a list of links stored in a JSON format file. 
+
+The images are saved to a new file in JSON format along with the name 
+of the image and the URL of the image.
+
+The script first reads the list of links from a file and creates a list 
+of tasks, each task being responsible 
+for downloading a single image from one of the links. Then, it uses the 
+asyncio library to run these tasks concurrently, 
+allowing for efficient downloading of the images.
+
+To prevent overloading the server, the code uses a semaphore to limit 
+the number of concurrent tasks to 20.
+
+The script also includes a function for replacing forbidden characters 
+in the file name with an underscore symbol, 
+as well as a function for sending a GET request to a link and parsing 
+the HTML contents using the BeautifulSoup library.
+
+'''

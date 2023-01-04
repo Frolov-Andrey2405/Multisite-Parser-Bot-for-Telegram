@@ -39,8 +39,8 @@ async def main():
     '''Semaphore to limit the number of concurrent tasks'''
     semaphore = Semaphore(20)
 
-    # Open the links.json file in write mode
-    with open('blendermarket/json/links.json', 'w') as file:
+    # Open the official_links.json file in write mode
+    with open('blendermarket/json/official_links.json', 'w') as file:
 
         client = httpx.AsyncClient()
 
