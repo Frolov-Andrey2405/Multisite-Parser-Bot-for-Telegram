@@ -1,90 +1,81 @@
-﻿import asyncio
+import asyncio
 from asyncio import Semaphore
-from json import loads
 from bs4 import BeautifulSoup
 import httpx
 import json
 
 FORBIDDEN_SYMBOLS = ('\\', '/', ':', '*', '?', '"', '<', '>', '|', ' ')
+BASE_URL = "https://blendermarket.com/products"
 
+async def page_count(client: httpx.AsyncClient) -> int:
+    '''Count page number'''
 
-async def read_links() -> list:
-    '''Reading links from a json format file'''
-    with open('blendermarket/json/official_links.json', 'r') as f:
-        links = f.readlines()
-    return links
+    responce = await client.get('https://blendermarket.com/products')
+
+    soup = BeautifulSoup(responce.text, 'html.parser')
+
+    page_count = soup.find('nav', class_='pagy-bootstrap-nav').find_all('li')[-2].get_text()
+
+    return int(page_count) 
 
 
 def replace_forbidden_symbols_for_file_name(string: str, symbol: str) -> str:
-    '''Replaces forbidden characters in the file with symbol'''
+    '''Replace FORBIDDEN_SYMBOLS in file on symbol'''
     new_str = ''
     for symbol in string:
         new_str += '_' if symbol in FORBIDDEN_SYMBOLS else symbol
     return new_str
 
-
-async def load_image(client: httpx.AsyncClient, link: str, semaphore: Semaphore, file) -> None:
-    '''Downloading images from a link'''
+async def load_data(client: httpx.AsyncClient, semaphore: Semaphore, file, page_number: int) -> None:
+    '''Load data from site'''
 
     await semaphore.acquire()
     # Load the link as a JSON object
-    link_json = loads(link)
-    # Get the link value from the JSON object
-    url = link_json['link']
-    # Send a GET request to the link
-    response = await client.get(url)
+
+     # Send a GET request to the URL with the page number
+    response = await client.get(f"{BASE_URL}?page={page_number}")
+
     # Parse the HTML contents
     soup = BeautifulSoup(response.text, 'html.parser')
+    # Find the blocks with the posts
+    post_blocks = soup.find_all(
+    'a', class_='text-nounderline text-nocolor')
 
-    # Find the section with the images
-    image_section = soup.find_all('img', class_='img-fluid')
+    # Iterate through the post blocks
+    for block in post_blocks:
+        link = block['href']
+        # Find the link to the product page
+        link = f'https://blendermarket.com/{link}'
+        response = await client.get(link)
+        # Parse the HTML contents
+        soup = BeautifulSoup(response.text, 'html.parser')
 
-    name_of_game = replace_forbidden_symbols_for_file_name(
-        soup.find('title').get_text(strip=True), '_')
+        # Find the section with the images 
+        image_section = soup.find_all('img', class_='img-fluid')
 
-    url_on_image = image_section[0]['src'] if len(image_section) > 0 else None
+        name_of_game = replace_forbidden_symbols_for_file_name(soup.find('title').get_text(strip=True), '_')
 
-    file.write(json.dumps({
-        'off_link': url,
-        'name_of_tools': name_of_game,
-        'url_on_image': url_on_image,
-    }) + '\n')
+        url_on_image = image_section[0]['src'] if len(image_section) > 0 else None
+
+        file.write(json.dumps({
+            'off_link': link,
+            'name_of_tools': name_of_game,
+            'url_on_image': url_on_image,
+            }) + '\n' )
 
     semaphore.release()
 
-
 async def main() -> None:
-    '''Creating Tasks and Downloading Images in Asynchronous Mode'''
-    semaphore = Semaphore(20)
+    '''Create tasks and async load data'''
+    semaphore = Semaphore(10)
     client = httpx.AsyncClient()
+    number_of_page = page_count(client)
+
     # Iterate through the links
-    with open('blendermarket/json/blend.json', 'w') as file:
-        tasks = [asyncio.create_task(load_image(client, link, semaphore, file)) for link in await read_links()]
+    with open('blendermarket\\json\\blend.json', 'w') as file:
+
+        tasks = [asyncio.create_task(load_data(client, semaphore, file, num_page)) for num_page in range(1, number_of_page+1)]
         await asyncio.gather(*tasks)
 
 if __name__ == '__main__':
     asyncio.run(main())
-
-'''
-
-This code is an asynchronous script for downloading images from 
-a list of links stored in a JSON format file. 
-
-The images are saved to a new file in JSON format along with the name 
-of the image and the URL of the image.
-
-The script first reads the list of links from a file and creates a list 
-of tasks, each task being responsible 
-for downloading a single image from one of the links. Then, it uses the 
-asyncio library to run these tasks concurrently, 
-allowing for efficient downloading of the images.
-
-To prevent overloading the server, the code uses a semaphore to limit 
-the number of concurrent tasks to 20.
-
-The script also includes a function for replacing forbidden characters 
-in the file name with an underscore symbol, 
-as well as a function for sending a GET request to a link and parsing 
-the HTML contents using the BeautifulSoup library.
-
-'''
