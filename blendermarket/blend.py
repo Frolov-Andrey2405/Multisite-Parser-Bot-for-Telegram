@@ -32,7 +32,7 @@ async def load_data(client: httpx.AsyncClient, semaphore: Semaphore, file, page_
     await semaphore.acquire()
     # Load the link as a JSON object
 
-     # Send a GET request to the URL with the page number
+    # Send a GET request to the URL with the page number
     response = await client.get(f"{BASE_URL}?page={page_number}")
 
     # Parse the HTML contents
@@ -79,3 +79,31 @@ async def main() -> None:
 
 if __name__ == '__main__':
     asyncio.run(main())
+
+'''
+Documentation:
+
+This code is a web scraper that scrapes information from the Blender Market website. 
+It uses the asyncio and httpx libraries to make concurrent HTTP requests and 
+parse the HTML data.
+
+The main function of the code is main(), which creates a semaphore with a limit 
+of 10 concurrent tasks and an HTTP client. It then calls the page_count() function 
+to get the number of pages to be scraped, and creates tasks to scrape each page 
+using the load_data() function. The tasks are run concurrently using the asyncio.gather() function.
+
+The page_count() function sends a GET request to the base URL of the website and 
+parses the HTML data using BeautifulSoup. It then finds the navigation menu and 
+extracts the page count from the menu.
+
+The load_data() function is responsible for loading data from each page of the website. 
+It sends a GET request to the URL of the page, and uses BeautifulSoup to parse the HTML data. 
+It then extracts the data for each product on the page, including the link to the 
+product page, the name of the product, and the URL of the product image. 
+The extracted data is then written to a file in JSON format.
+
+The replace_forbidden_symbols_for_file_name() function is a helper function that 
+replaces forbidden characters in a file name with an underscore symbol. 
+This is done to ensure that the file name is valid and can be saved on the filesystem.
+
+'''

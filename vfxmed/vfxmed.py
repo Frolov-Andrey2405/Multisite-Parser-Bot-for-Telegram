@@ -151,3 +151,39 @@ async def main() -> None:
 
 if __name__ == '__main__':
     asyncio.run(main())
+
+'''
+Documentation: 
+
+This code is a web scraper designed to extract download links for 
+software from the website www.vfxmed.com. 
+It begins by setting the base URL for the website and two patterns 
+for extracting links and for matching links that contain the string 
+"#comment-". It also initializes a flag to indicate when pagination 
+should stop and a set to store unique links.
+
+The extract_links function takes in a BeautifulSoup object and a set of 
+unique links, and extracts links from the soup object that match the 
+specified pattern and do not match the comment_pattern. It then modifies 
+the titles of the links to remove unwanted words, and yields a tuple of the 
+link and the modified title.
+
+The get_download_links function is an async function that takes in a list of 
+links and a file object. It iterates through the links, sending a GET request 
+to each one and parsing the HTML content with BeautifulSoup. It then finds the 
+content section of the page and extracts the download links from it. 
+It checks if each download link is a repetition using the check_repetition function, 
+and if it is not, writes it to the file in JSON format.
+
+The check_repetition function takes in a download link and checks if it 
+is already present in the unique_links set. If it is not, it adds it to 
+the set and returns False. If it is, it returns True.
+
+The main loop of the code begins by making a GET request to the base URL and 
+parsing the HTML content with BeautifulSoup. It then calls the extract_links 
+function to extract the links from the content and the get_download_links 
+function to write the download links to a file. It also checks the value of 
+the stop_paginating flag and the nav-previous element to determine when to 
+stop paginating and end the loop.
+
+'''
