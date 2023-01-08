@@ -1,51 +1,52 @@
-import mysql.connector
+import asyncio
+import aiomysql
 import json
-import os
 
 
-cnx = mysql.connector.connect(
-    user='root', password='PASSWORD',
-    host='127.0.0.1', database='allocation_parsing')
+async def insert_data(conn, data, table):
+    async with conn.cursor() as cursor:
+        if table == "Vfxmed":
+            sql = "INSERT INTO Vfxmed (link, title, download_link) VALUES (%s, %s, %s)"
+            values = (
+                data["link"],
+                data["title"],
+                data["download_link"])
 
-cursor = cnx.cursor()
+        elif table == "BlenderMarket":
+            sql = "INSERT INTO BlenderMarket (off_link, name_of_tools, url_on_image) VALUES (%s, %s, %s)"
+            values = (
+                data["off_link"],
+                data["name_of_tools"],
+                data["url_on_image"])
 
-
-def read_json(json_file):
-    data = []
-    with open(json_file, 'r') as f:
-        for line in f:
-            data.append(json.loads(line))
-    return data
-
-
-def insert_rows(data, table_name):
-    '''Define a function to insert rows into the database table'''
-    for row in data:
-        column_names = ", ".join(row.keys())
-        placeholders = ", ".join(["%s"] * len(row))
-        query = f"INSERT INTO {table_name} ({column_names}) VALUES ({placeholders})"
-        values = tuple(row.values())
-        cursor.execute(query, values)
-        cnx.commit()
+        await cursor.execute(sql, values)
 
 
-# Read the .json files and insert the rows into the appropriate tables
-links = read_json('vfxmed/json/links.json')
-insert_rows(links, 'Vault')
+async def main():
+    conn = await aiomysql.connect(
+        host='127.0.0.1',
+        user='root',
+        password='password',
+        db='allocation_parsing',
+        loop=asyncio.get_event_loop()
+    )
 
-headers = read_json('vfxmed/json/headers.json')
-insert_rows(headers, 'Vault')
+    # Read the data from the vfxmed.json file
+    with open("vfxmed/json/vfxmed.json", "r") as file:
+        for line in file:
+            # Load the data as a JSON object
+            data = json.loads(line)
+            await insert_data(conn, data, "Vfxmed")
 
-download_links = read_json('vfxmed/json/download_link.json')
-insert_rows(download_links, 'Vault')
+    # Read the data from the blend.json file
+    with open("blendermarket/json/blend.json", "r") as file:
+        for line in file:
+            # Load the data as a JSON object
+            data = json.loads(line)
+            await insert_data(conn, data, "BlenderMarket")
 
-official_links = read_json('blendermarket/json/official_links.json')
-insert_rows(official_links, 'Vault')
+    await conn.commit()
+    conn.close()
 
-official_image_links = read_json(
-    'blendermarket/json/official_image_links.json')
-insert_rows(official_links, 'Vault')
-
-# Close the connection
-cursor.close()
-cnx.close()
+if __name__ == '__main__':
+    asyncio.run(main())
