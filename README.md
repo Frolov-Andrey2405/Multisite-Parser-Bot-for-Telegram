@@ -24,7 +24,7 @@ The structure of the data parsed from blendermarket.com has the following format
 
 `{
 'off_link': link,
-'name_of_tools': name_of_game,
+'name_of_tools': name_of_tools,
 'url_on_image': url_on_image,
 }`
 
