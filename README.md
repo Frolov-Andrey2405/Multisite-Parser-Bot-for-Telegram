@@ -1,16 +1,42 @@
 # Multisite-Parser-Bot-for-Telegram
-This repository contains a Telegram bot that is able to parse multiple websites for information and send it to the user through private messages. The websites currently supported are www.vfxmed.com, https://cgpersia.com/, and https://blendermarket.com/.
+This repository contains a Telegram bot that was created using the aiogram library. The bot retrieves data from a MySQL database and publishes it in a Telegram channel.
 
 ## Detailed Description
-The Telegram bot is implemented using the aiogram library and is designed to be easily extensible to support additional websites. When the user sends the /start command, the bot will send them a series of private messages containing links, text, and images scraped from the supported websites.
+The Telegram bot in this repository was created using the aiogram library and is designed to be easily extendable for support and development. The purpose of the bot is to automate the process of publishing new addons and elements of add-ons in a Telegram channel. These publications consist of messages containing links, text, and images taken from the data stored in the MySQL database.
 
-The links and text are obtained by parsing the HTML content of the website using the lxml library. The images are downloaded and saved to the images folder, with the file name corresponding to the associated text.
+New data is entered into the database asynchronously using the aiomysql library and .json files. This data is then sorted and checked for similarity in order to link the Vfxmed and BlenderMarket tables. 
 
-In order to efficiently process and store the data obtained from the websites, the bot utilizes the json library to read and write the data to links.json and headers.json files.
+Parsing occurs on the following websites: 
+- https://blendermarket.com/products
+- https://www.vfxmed.com/tag/blender/page/
+
+Asynchronous parsing (using asyncio, httpx, and Semaphore technologies) is performed by parsing the HTML content of the sites using json, re, BeautifulSoup, requests, and lxml. 
+
+The structure of the data parsed from vfxmed.com has the following format:
+`{
+"link": href,
+"title": title,
+"download_link": download_link
+}`
+
+The structure of the data parsed from blendermarket.com has the following format:
+`{
+'off_link': link,
+'name_of_tools': name_of_game,
+'url_on_image': url_on_image,
+}`
+
 
 #### Technologies and Libraries
-- **[Python 3.x+](https://www.python.org/)**
-- **[aiogram](https://docs.aiogram.dev/en/latest/)** library for creating the Telegram bot
-- **[lxml](https://pypi.org/project/lxml/)** library for parsing HTML content
-- **[json](https://docs.python.org/3/library/json.html#module-json)** library for reading and writing data to files
-- **[requests](https://pypi.org/project/requests/)** library for making HTTP requests to websites
+- **[Python 3.x+](https://www.python.org/)**: served a central role as the main programming language in the project
+- **[aiogram](https://aiogram.readthedocs.io/en/latest/)**: a library for creating Telegram bots in Python
+- **[MySQL](https://dev.mysql.com/doc/)**: a popular database management system
+- **[aiomysql](https://aiomysql.readthedocs.io/en/latest/)**: a library for accessing MySQL databases asynchronously in Python
+- **[json](https://docs.python.org/3/library/json.html)**: a data interchange format that is used for storing and exchanging data
+- **[re](https://docs.python.org/3/library/re.html)**(regular expressions): a library in Python for searching and manipulating strings
+- **[BeautifulSoup](https://beautiful-soup-4.readthedocs.io/en/latest/)**: a library for parsing HTML and XML in Python
+- **[requests](https://requests.readthedocs.io/en/latest/)**: a library for making HTTP requests in Python
+- **[lxml](https://lxml.de/)**: a library for parsing XML and HTML in Python
+- **[asyncio](https://docs.python.org/3/library/asyncio.html)**: a library for asynchronous programming in Python
+- **[httpx](https://www.python-httpx.org/)**: an asynchronous HTTP library for Python
+- **[Semaphore](https://docs.python.org/3/library/asyncio-semaphore.html)**: a library for controlling access to resources in Python
