@@ -13,6 +13,7 @@ Parsing occurs on the following websites:
 Asynchronous parsing (using asyncio, httpx, and Semaphore technologies) is performed by parsing the HTML content of the sites using json, re, BeautifulSoup, requests, and lxml. 
 
 The structure of the data parsed from vfxmed.com has the following format:
+
 `{
 "link": href,
 "title": title,
@@ -20,6 +21,7 @@ The structure of the data parsed from vfxmed.com has the following format:
 }`
 
 The structure of the data parsed from blendermarket.com has the following format:
+
 `{
 'off_link': link,
 'name_of_tools': name_of_game,
