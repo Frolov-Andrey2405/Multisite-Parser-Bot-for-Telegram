@@ -53,13 +53,14 @@ async def load_data(client: httpx.AsyncClient, semaphore: Semaphore, file, page_
         # Find the section with the images 
         image_section = soup.find_all('img', class_='img-fluid')
 
-        name_of_game = replace_forbidden_symbols_for_file_name(soup.find('title').get_text(strip=True), '_')
+        name_of_tools = replace_forbidden_symbols_for_file_name(
+            soup.find('title').get_text(strip=True), '_')
 
         url_on_image = image_section[0]['src'] if len(image_section) > 0 else None
 
         file.write(json.dumps({
             'off_link': link,
-            'name_of_tools': name_of_game,
+            'name_of_tools': name_of_tools,
             'url_on_image': url_on_image,
             }) + '\n' )
 
