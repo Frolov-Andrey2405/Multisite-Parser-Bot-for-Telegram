@@ -41,8 +41,8 @@ def extract_links(soup, unique_links):
         if href and re.match(pattern, href) and \
             not href.endswith('#respond') and \
                 not href.endswith('#comments') and \
-                    not re.search(comment_pattern, href) and \
-                        href not in unique_links:
+        not re.search(comment_pattern, href) and \
+        href not in unique_links:
             unique_links.add(href)
 
             # Remove "Permalink to" from the title
@@ -84,8 +84,15 @@ async def get_download_links(links, file):
             # Iterate through the download links
             for element in download_links:
                 if 'Filename:' in element.text:
-                    # Extract the download link
-                    download_link = element.a['href']
+                    if element.a:
+                        download_link = element.a['href']
+                    else:
+                        h1_element = content_section.find('h1')
+                        if h1_element.a:
+                            download_link = h1_element.a['href']
+                        else:
+                            # If no links are found in h1 then move on through the code
+                            continue
 
                     # Check if the download link is a repetition
                     if check_repetition(download_link):
