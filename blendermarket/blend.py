@@ -70,7 +70,7 @@ async def main() -> None:
     '''Create tasks and async load data'''
     semaphore = Semaphore(10)
     client = httpx.AsyncClient()
-    number_of_page = page_count(client)
+    number_of_page = await page_count(client)
 
     # Iterate through the links
     with open('blendermarket\\json\\blend.json', 'w') as file:
