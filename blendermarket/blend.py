@@ -3,9 +3,11 @@ from asyncio import Semaphore
 from bs4 import BeautifulSoup
 import httpx
 import json
+from time import time, sleep
 
 FORBIDDEN_SYMBOLS = ('\\', '/', ':', '*', '?', '"', '<', '>', '|', ' ')
 BASE_URL = "https://blendermarket.com/products"
+
 
 async def page_count(client: httpx.AsyncClient) -> int:
     '''Count page number'''
@@ -23,18 +25,23 @@ def replace_forbidden_symbols_for_file_name(string: str, symbol: str) -> str:
     '''Replace FORBIDDEN_SYMBOLS in file on symbol'''
     new_str = ''
     for symbol in string:
-        new_str += ' ' if symbol in FORBIDDEN_SYMBOLS else symbol
+        new_str += '_' if symbol in FORBIDDEN_SYMBOLS else symbol
     return new_str
+
 
 async def load_data(client: httpx.AsyncClient, semaphore: Semaphore, file, page_number: int) -> None:
     '''Load data from site'''
 
     await semaphore.acquire()
     # Load the link as a JSON object
-
+    sleep(0.00005)
     # Send a GET request to the URL with the page number
-    response = await client.get(f"{BASE_URL}?page={page_number}")
-
+    try:
+        response = await client.get(f"{BASE_URL}?page={page_number}")
+    except httpx.ReadTimeout:
+        with open('./logs/links_on_page', 'w') as file:
+            file.write(f"{BASE_URL}?page={page_number}")
+            return None    
     # Parse the HTML contents
     soup = BeautifulSoup(response.text, 'html.parser')
     # Find the blocks with the posts
@@ -42,35 +49,53 @@ async def load_data(client: httpx.AsyncClient, semaphore: Semaphore, file, page_
     'a', class_='text-nounderline text-nocolor')
 
     # Iterate through the post blocks
-    for block in post_blocks:
-        link = block['href']
-        # Find the link to the product page
-        link = f'https://blendermarket.com/{link}'
-        response = await client.get(link)
-        # Parse the HTML contents
-        soup = BeautifulSoup(response.text, 'html.parser')
+    tasks = [asyncio.create_task(write_data_in_files(block, client, file)) for block in post_blocks]
 
-        # Find the section with the images 
-        image_section = soup.find_all('img', class_='img-fluid')
-
-        name_of_tools = replace_forbidden_symbols_for_file_name(
-            soup.find('title').get_text(strip=True), '_')
-        name_of_tools = name_of_tools.replace(" - Blender Market", "")
-
-        url_on_image = image_section[0]['src'] if len(image_section) > 0 else None
-
-        file.write(json.dumps({
-            'off_link': link,
-            'name_of_tools': name_of_tools,
-            'url_on_image': url_on_image,
-            }) + '\n' )
-
+    await asyncio.gather(*tasks)
+    
     semaphore.release()
+
+
+async def write_data_in_files(block: list, client: httpx.AsyncClient, file):
+    link = block['href']
+    # Find the link to the product page
+    link = f'https://blendermarket.com/{link}'
+    sleep(0.00005)
+    try:
+        response = await client.get(link)
+    except httpx.ReadTimeout:
+        with open('./logs/links_on_product', 'w') as file:
+            file.write(link)
+            return None
+    # Parse the HTML contents
+    soup = BeautifulSoup(response.text, 'html.parser')
+    
+    # Find the section with the images 
+    image_section = soup.find_all('img', class_='img-fluid')
+
+    try:
+        name_of_tools = soup.find('title').get_text(strip=True)
+        name_of_tools = name_of_tools.replace(" - Blender Market", "")
+    except AttributeError:
+        return None
+
+    name_of_tools = replace_forbidden_symbols_for_file_name(name_of_tools, '_')
+
+    url_on_image = image_section[0]['src'] if len(image_section) > 0 else None
+
+    file.write(json.dumps({
+        'off_link': link,
+        'name_of_tools': name_of_tools,
+        'url_on_image': url_on_image,
+        }) + '\n')            
+
 
 async def main() -> None:
     '''Create tasks and async load data'''
-    semaphore = Semaphore(10)
-    client = httpx.AsyncClient()
+    semaphore = Semaphore(1)
+    start_time = time()
+    client = httpx.AsyncClient(timeout=25)
+    client.headers['user-agent'] = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36'
     number_of_page = await page_count(client)
 
     # Iterate through the links
@@ -78,6 +103,9 @@ async def main() -> None:
 
         tasks = [asyncio.create_task(load_data(client, semaphore, file, num_page)) for num_page in range(1, number_of_page+1)]
         await asyncio.gather(*tasks)
+
+    print(time() - start_time)
+
 
 if __name__ == '__main__':
     asyncio.run(main())
