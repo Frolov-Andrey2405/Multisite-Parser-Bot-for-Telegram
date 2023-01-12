@@ -41,8 +41,8 @@ def extract_links(soup, unique_links):
         if href and re.match(pattern, href) and \
             not href.endswith('#respond') and \
                 not href.endswith('#comments') and \
-        not re.search(comment_pattern, href) and \
-        href not in unique_links:
+            not re.search(comment_pattern, href) and \
+            href not in unique_links:
             unique_links.add(href)
 
             # Remove "Permalink to" from the title
@@ -79,30 +79,29 @@ async def get_download_links(links, file):
         # Find the content section of the page
         content_section = link_soup.find('div', class_='entry-content')
         if content_section is not None:
+            download_link = None
             # Find the download links in the content section
-            download_links = content_section.find_all('h3')
-            # Iterate through the download links
-            for element in download_links:
-                if 'Filename:' in element.text:
+            h3_elements = content_section.find_all('h3')
+            for element in h3_elements:
+                if 'Filename:' in element.text and element.a:
+                    download_link = element.a['href']
+                    break
+
+            if not download_link:
+                h1_elements = content_section.find_all('h1')
+                for element in h1_elements:
                     if element.a:
                         download_link = element.a['href']
-                    else:
-                        h1_element = content_section.find('h1')
-                        if h1_element.a:
-                            download_link = h1_element.a['href']
-                        else:
-                            # If no links are found in h1 then move on through the code
-                            continue
+                        break
 
-                    # Check if the download link is a repetition
-                    if check_repetition(download_link):
-                        continue  # Skip writing the link to the file if it is a repetition
+            # Check if the download link is a repetition
+            if download_link and not check_repetition(download_link):
+                # Write the link in JSON format to the file
+                file.write(json.dumps({
+                    "link": href,
+                    "title": title,
+                    "download_link": download_link}) + '\n')
 
-                    # Write the link in JSON format to the file
-                    file.write(json.dumps({
-                        "link": href,
-                        "title": title,
-                        "download_link": download_link}) + '\n')
 
 
 def check_repetition(download_link):
@@ -128,7 +127,7 @@ def check_repetition(download_link):
 async def main() -> None:
     '''Create a Semaphore to limit the number of concurrent tasks'''
 
-    sem = asyncio.Semaphore(20)
+    sem = asyncio.Semaphore(100)
 
     # Open a file to write the links in JSON format
     with open('vfxmed/json/vfxmed.json', 'w') as f:
