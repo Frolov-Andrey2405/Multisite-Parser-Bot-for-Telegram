@@ -87,8 +87,11 @@ async def get_download_links(links, file, client):
                 h1_elements = content_section.find_all('h1')
                 for element in h1_elements:
                     if element.a:
-                        download_link = element.a['href']
-                        break
+                        if element.a['href'].startswith("https://controlc.com/") or \
+                            element.a['href'].startswith("https://www.file-upload.com/"):
+                            download_link = element.a['href']
+                            break
+
 
             # Check if the download link is a repetition
             if download_link:
