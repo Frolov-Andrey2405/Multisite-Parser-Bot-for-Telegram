@@ -23,7 +23,7 @@ def replace_forbidden_symbols_for_file_name(string: str, symbol: str) -> str:
     '''Replace FORBIDDEN_SYMBOLS in file on symbol'''
     new_str = ''
     for symbol in string:
-        new_str += '_' if symbol in FORBIDDEN_SYMBOLS else symbol
+        new_str += ' ' if symbol in FORBIDDEN_SYMBOLS else symbol
     return new_str
 
 async def load_data(client: httpx.AsyncClient, semaphore: Semaphore, file, page_number: int) -> None:
@@ -55,6 +55,7 @@ async def load_data(client: httpx.AsyncClient, semaphore: Semaphore, file, page_
 
         name_of_tools = replace_forbidden_symbols_for_file_name(
             soup.find('title').get_text(strip=True), '_')
+        name_of_tools = name_of_tools.replace(" - Blender Market", "")
 
         url_on_image = image_section[0]['src'] if len(image_section) > 0 else None
 
