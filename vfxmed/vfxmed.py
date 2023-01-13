@@ -2,8 +2,8 @@ import json
 import re
 from bs4 import BeautifulSoup
 import asyncio
-import requests
 from lxml import html
+import httpx
 
 # Set the base URL of the website
 base_url = 'https://www.vfxmed.com/tag/blender/page/'
@@ -14,14 +14,10 @@ pattern = r'https://www.vfxmed.com/\d{4}/\d{2}/blender-'
 # Set the pattern to match links with "#comment-" followed by digits
 comment_pattern = r'#comment-\d+'
 
-# Initialize a flag to indicate when to stop paginating
-stop_paginating = False
-
 # Initialize a set to store the unique links
-unique_links = set()
 
 
-def extract_links(soup, unique_links):
+def extract_links(soup):
     """
     Extracts links from the given BeautifulSoup object that match the specified pattern and
     do not match the comment pattern. Returns a set of unique links.
@@ -32,38 +28,38 @@ def extract_links(soup, unique_links):
         return
 
     # Find all the links with the "blender" tag
-    links = soup.find_all('a')  # Use find_all() instead of xpath()
+    links = soup.find_all('h2', class_='entry-title')  # Use find_all() instead of xpath()
+
+    list_href_title = []
+
+    links = list(map(lambda x: x.find('a'), links))
+
+    if len(links) == 0:
+        raise ValueError
 
     # Extract links that match the specified format
     for link in links:
         href = link.get('href')
         title = link.get('title')
-        if href and re.match(pattern, href) and \
-            not href.endswith('#respond') and \
-                not href.endswith('#comments') and \
-            not re.search(comment_pattern, href) and \
-            href not in unique_links:
-            unique_links.add(href)
+        # Remove "Permalink to" from the title
+        title = re.sub(r'Permalink to ', '', title)
+        # Remove other unwanted words from the title
+        title = re.sub(
+        r'Blender 3D:\s*|Blender \d+(\.\d+)?\+?|Blender \d+\.?\d*:|^Blender\b', '', title)
+        title = re.sub(r'(Crack|CRACK)', '', title)
+        title = re.sub(r'Updated|Update|UPDATED', '', title)
+        title = title.replace('Complete', '')
+        title = title.replace('Download', '')
+        title = re.sub(r'v\b', '', title)
+        title = re.sub(r'^\s+||s+$', '', title)
+        title = title.replace('\u2013', '-')
+        title = title.replace('\u2019', "'")
 
-            # Remove "Permalink to" from the title
-            title = re.sub(r'Permalink to ', '', title)
-
-            # Remove other unwanted words from the title
-            title = re.sub(
-                r'Blender 3D:\s*|Blender \d+(\.\d+)?\+?|Blender \d+\.?\d*:|^Blender\b', '', title)
-            title = re.sub(r'(Crack|CRACK)', '', title)
-            title = re.sub(r'Updated|Update|UPDATED', '', title)
-            title = title.replace('Complete', '')
-            title = title.replace('Download', '')
-            title = re.sub(r'v\b', '', title)
-            title = re.sub(r'^\s+||s+$', '', title)
-            title = title.replace('\u2013', '-')
-            title = title.replace('\u2019', "'")
-
-            yield (href, title)
+        list_href_title.append((href, title))
+    return list_href_title
 
 
-async def get_download_links(links, file):
+async def get_download_links(links, file, client):
     """
     Sends a GET request to each link in the given list of links, extracts the download links
     from the page, and writes them to the given file in JSON format.
@@ -72,7 +68,7 @@ async def get_download_links(links, file):
     # Iterate through the links
     for href, title in links:
         # Send a GET request to the link
-        link_response = requests.get(href)
+        link_response = await client.get(href)
         # Parse the HTML content of the link
         link_soup = BeautifulSoup(link_response.text, 'html.parser')
 
@@ -95,7 +91,7 @@ async def get_download_links(links, file):
                         break
 
             # Check if the download link is a repetition
-            if download_link and not check_repetition(download_link):
+            if download_link:
                 # Write the link in JSON format to the file
                 file.write(json.dumps({
                     "link": href,
@@ -103,57 +99,47 @@ async def get_download_links(links, file):
                     "download_link": download_link}) + '\n')
 
 
-
-def check_repetition(download_link):
-    """
-    Checks if the given download link is already present in the vfxmed.json file. 
-    Returns True if it's a repeat, False otherwise.
-    """
-
-    # Open the vfxmed.json file in read mode
-    with open('vfxmed/json/vfxmed.json', 'r') as file:
-        # Iterate through the lines in the file
-        for line in file:
-            # Load the line as a JSON object
-            data = json.loads(line)
-            # Check if the download link is already present in the file
-            if data['download_link'] == download_link:
-                return True
-
-    # If the download link is not found in the file, return False
-    return False
-
-
 async def main() -> None:
-    '''Create a Semaphore to limit the number of concurrent tasks'''
-
-    sem = asyncio.Semaphore(100)
-
     # Open a file to write the links in JSON format
     with open('vfxmed/json/vfxmed.json', 'w') as f:
         # Initialize a counter for the page number
         page_number = 1
+        client = httpx.AsyncClient(timeout=10)
+        tasks = []
 
-        while not stop_paginating:
+        while True:
             # Acquire a lock from the semaphore
-            async with sem:
-                # Send a GET request to the page
-                response = requests.get(base_url + str(page_number))
+            # Send a GET request to the page
+            try:
+                if page_number != 1:
+                    response = await client.get(base_url + str(page_number) + '/')
+                else:
+                    response = await client.get('https://www.vfxmed.com/tag/blender/')
+            except httpx.ReadTimeout:
+                print('ReadTimeout')
+                print(base_url + str(page_number) + '/')
+                continue
+            # Parse the HTML content of the page
+            soup = BeautifulSoup(response.text, 'html.parser')
 
-                # Parse the HTML content of the page
-                soup = BeautifulSoup(response.text, 'html.parser')
+            # Extract the links from the page
+            try:
+                page_links = extract_links(soup)
+            except ValueError:
+                await asyncio.gather(*tasks)
+                break
 
-                # Extract the links from the page
-                page_links = extract_links(soup, unique_links)
+            # Create a task to get the download links for each page
+            tasks.append(asyncio.create_task(get_download_links(page_links, f, client)))
 
-                # Create a task to get the download links for each page
-                task = asyncio.create_task(get_download_links(page_links, f))
-
-                # Increment the page number
-                page_number += 1
+            # Increment the page number
+            page_number += 1
 
             # Wait for the tasks to complete
-            await task
+
+            if len(tasks) == 40:
+                await asyncio.gather(*tasks)
+                tasks.clear()
 
 if __name__ == '__main__':
     asyncio.run(main())
