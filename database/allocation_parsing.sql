@@ -13,7 +13,7 @@ CREATE TABLE
     BlenderMarket(
         off_link VARCHAR(300) NOT NULL,
         name_of_tools VARCHAR(300) NOT NULL,
-        url_on_image VARCHAR(1000) NOT NULL
+        url_on_image VARCHAR(1000)
     );
 
 SELECT
