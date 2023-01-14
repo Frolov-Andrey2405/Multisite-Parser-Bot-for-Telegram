@@ -1,5 +1,6 @@
 import asyncio
 from asyncio import Semaphore
+import re
 from bs4 import BeautifulSoup
 import httpx
 import json
@@ -16,10 +17,10 @@ async def page_count(client: httpx.AsyncClient) -> int:
 
     soup = BeautifulSoup(responce.text, 'html.parser')
 
-    page_count = soup.find('nav', class_='pagy-bootstrap-nav').find_all('li')[-2].get_text()
+    page_count = soup.find(
+        'nav', class_='pagy-bootstrap-nav').find_all('li')[-2].get_text()
 
-    return int(page_count) 
-
+    return int(page_count)
 
 def replace_forbidden_symbols_for_file_name(string: str, symbol_repalced: str) -> str:
     '''Replace FORBIDDEN_SYMBOLS in file on symbol'''
@@ -41,18 +42,19 @@ async def load_data(client: httpx.AsyncClient, semaphore: Semaphore, file, page_
     except:
         with open('./logs/links_on_page', 'w') as file:
             file.write(f"{BASE_URL}?page={page_number}")
-            return None    
+            return None
     # Parse the HTML contents
     soup = BeautifulSoup(response.text, 'html.parser')
     # Find the blocks with the posts
     post_blocks = soup.find_all(
-    'a', class_='text-nounderline text-nocolor')
+        'a', class_='text-nounderline text-nocolor')
 
     # Iterate through the post blocks
-    tasks = [asyncio.create_task(write_data_in_files(block, client, file)) for block in post_blocks]
+    tasks = [asyncio.create_task(write_data_in_files(
+        block, client, file)) for block in post_blocks]
 
     await asyncio.gather(*tasks)
-    
+
     semaphore.release()
 
 
@@ -69,8 +71,8 @@ async def write_data_in_files(block: list, client: httpx.AsyncClient, file):
             return None
     # Parse the HTML contents
     soup = BeautifulSoup(response.text, 'html.parser')
-    
-    # Find the section with the images 
+
+    # Find the section with the images
     image_section = soup.find_all('img', class_='img-fluid')
 
     try:
@@ -79,7 +81,12 @@ async def write_data_in_files(block: list, client: httpx.AsyncClient, file):
     except AttributeError:
         return None
 
-    name_of_tools = replace_forbidden_symbols_for_file_name(name_of_tools, ' ')
+    # Removing unwanted symbols
+    name_of_tools = re.sub(
+        r'\\u[0-9a-fA-F]{4}|\\U[0-9a-fA-F]{8}', '', name_of_tools)
+
+    for symbol in FORBIDDEN_SYMBOLS:
+        name_of_tools = name_of_tools.replace(symbol, ' ')
 
     url_on_image = image_section[0]['src'] if len(image_section) > 0 else None
 
@@ -87,7 +94,7 @@ async def write_data_in_files(block: list, client: httpx.AsyncClient, file):
         'off_link': link,
         'name_of_tools': name_of_tools,
         'url_on_image': url_on_image,
-        }) + '\n')            
+    }) + '\n')
 
 
 async def main() -> None:
@@ -101,7 +108,8 @@ async def main() -> None:
     # Iterate through the links
     with open('blendermarket\\json\\blend.json', 'w') as file:
 
-        tasks = [asyncio.create_task(load_data(client, semaphore, file, num_page)) for num_page in range(1, number_of_page+1)]
+        tasks = [asyncio.create_task(load_data(
+            client, semaphore, file, num_page)) for num_page in range(1, number_of_page+1)]
         await asyncio.gather(*tasks)
 
 
@@ -111,27 +119,44 @@ if __name__ == '__main__':
 '''
 Documentation:
 
-This code is a web scraper that scrapes information from the Blender Market website. 
-It uses the asyncio and httpx libraries to make concurrent HTTP requests and 
-parse the HTML data.
+This code is a web scraping script that extracts data from the website 
+blendermarket.com. 
+The script is written in Python and utilizes the asyncio, bs4, httpx, 
+json, re, and time libraries.
 
-The main function of the code is main(), which creates a semaphore with a limit 
-of 10 concurrent tasks and an HTTP client. It then calls the page_count() function 
-to get the number of pages to be scraped, and creates tasks to scrape each page 
-using the load_data() function. The tasks are run concurrently using the asyncio.gather() function.
+The script begins by defining a list of forbidden symbols that will 
+be removed from the extracted data later on in the script. 
+The BASE_URL variable is set to the base URL of the website that the script 
+will be scraping.
 
-The page_count() function sends a GET request to the base URL of the website and 
-parses the HTML data using BeautifulSoup. It then finds the navigation menu and 
-extracts the page count from the menu.
+The page_count() function is an asynchronous function that takes in an 
+httpx.AsyncClient object as a parameter and uses it to make a GET request 
+to the website's products page. The function then parses the HTML response 
+using BeautifulSoup and extracts the page count from the pagination 
+navigation element. This value is returned as an integer.
 
-The load_data() function is responsible for loading data from each page of the website. 
-It sends a GET request to the URL of the page, and uses BeautifulSoup to parse the HTML data. 
-It then extracts the data for each product on the page, including the link to the 
-product page, the name of the product, and the URL of the product image. 
-The extracted data is then written to a file in JSON format.
+The replace_forbidden_symbols_for_file_name() function takes in a string 
+and a replacement symbol as parameters. It then iterates through the string, 
+replacing any forbidden symbols with the replacement symbol. 
+The modified string is returned.
 
-The replace_forbidden_symbols_for_file_name() function is a helper function that 
-replaces forbidden characters in a file name with an underscore symbol. 
-This is done to ensure that the file name is valid and can be saved on the filesystem.
+The load_data() function is an asynchronous function that takes in 
+an httpx.AsyncClient object, a Semaphore object, a file object, and 
+a page number as parameters. The function uses the httpx.AsyncClient 
+object to make a GET request to the website using the provided page number 
+as a query parameter. The function then parses the HTML response using 
+BeautifulSoup and extracts the post blocks. For each post block, the function 
+creates an asynchronous task that calls the write_data_in_files() function 
+and passes the post block, httpx.AsyncClient object, and file object as parameters. 
+The function then waits for all tasks to complete before releasing 
+the semaphore and returning None.
 
+The write_data_in_files() function is an asynchronous function that takes 
+in a list, an httpx.AsyncClient object, and a file object as parameters. 
+The function extracts the product page link from the provided list and uses 
+the httpx.AsyncClient object to make a GET request to the product page. 
+The function then parses the HTML response using BeautifulSoup and extracts 
+the product name, image URL, and product link. The function removes any 
+unwanted symbols from the product name using regular expressions. The function 
+then writes the extracted data to the provided file object in JSON format.
 '''
