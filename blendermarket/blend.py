@@ -21,11 +21,11 @@ async def page_count(client: httpx.AsyncClient) -> int:
     return int(page_count) 
 
 
-def replace_forbidden_symbols_for_file_name(string: str, symbol: str) -> str:
+def replace_forbidden_symbols_for_file_name(string: str, symbol_repalced: str) -> str:
     '''Replace FORBIDDEN_SYMBOLS in file on symbol'''
     new_str = ''
     for symbol in string:
-        new_str += '_' if symbol in FORBIDDEN_SYMBOLS else symbol
+        new_str += symbol_repalced if symbol in FORBIDDEN_SYMBOLS else symbol
     return new_str
 
 
@@ -34,11 +34,11 @@ async def load_data(client: httpx.AsyncClient, semaphore: Semaphore, file, page_
 
     await semaphore.acquire()
     # Load the link as a JSON object
-    sleep(0.00005)
+    sleep(0.005)
     # Send a GET request to the URL with the page number
     try:
         response = await client.get(f"{BASE_URL}?page={page_number}")
-    except httpx.ReadTimeout:
+    except:
         with open('./logs/links_on_page', 'w') as file:
             file.write(f"{BASE_URL}?page={page_number}")
             return None    
@@ -60,7 +60,7 @@ async def write_data_in_files(block: list, client: httpx.AsyncClient, file):
     link = block['href']
     # Find the link to the product page
     link = f'https://blendermarket.com/{link}'
-    sleep(0.00005)
+    sleep(0.005)
     try:
         response = await client.get(link)
     except httpx.ReadTimeout:
@@ -79,7 +79,7 @@ async def write_data_in_files(block: list, client: httpx.AsyncClient, file):
     except AttributeError:
         return None
 
-    name_of_tools = replace_forbidden_symbols_for_file_name(name_of_tools, '_')
+    name_of_tools = replace_forbidden_symbols_for_file_name(name_of_tools, ' ')
 
     url_on_image = image_section[0]['src'] if len(image_section) > 0 else None
 
@@ -103,8 +103,6 @@ async def main() -> None:
 
         tasks = [asyncio.create_task(load_data(client, semaphore, file, num_page)) for num_page in range(1, number_of_page+1)]
         await asyncio.gather(*tasks)
-
-    print(time() - start_time)
 
 
 if __name__ == '__main__':
