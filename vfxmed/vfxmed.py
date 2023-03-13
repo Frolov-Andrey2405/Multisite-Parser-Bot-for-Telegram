@@ -18,17 +18,13 @@ comment_pattern = r'#comment-\d+'
 
 
 def extract_links(soup):
-    """
-    Extracts links from the given BeautifulSoup object that match the specified pattern and
-    do not match the comment pattern. Returns a set of unique links.
-    """
-
     # Check if the soup object is None
     if soup is None:
         return
 
     # Find all the links with the "blender" tag
-    links = soup.find_all('h2', class_='entry-title')  # Use find_all() instead of xpath()
+    # Use find_all() instead of xpath()
+    links = soup.find_all('h2', class_='entry-title')
 
     list_href_title = []
 
@@ -41,21 +37,40 @@ def extract_links(soup):
     for link in links:
         href = link.get('href')
         title = link.get('title')
+
         # Remove "Permalink to" from the title
         title = re.sub(r'Permalink to ', '', title)
         # Remove other unwanted words from the title
         title = re.sub(
-        r'Blender 3D:\s*|Blender \d+(\.\d+)?\+?|Blender \d+\.?\d*:|^Blender\b', '', title)
+            r'Blender 3D:\s*|Blender \d+(\.\d+)?\+?|Blender \d+\.?\d*:|^Blender\b', '', title)
         title = re.sub(r'(Crack|CRACK)', '', title)
         title = re.sub(r'Updated|Update|UPDATED', '', title)
         title = title.replace('Complete', '')
         title = title.replace('Download', '')
         title = re.sub(r'v\b', '', title)
-        title = re.sub(r'^\s+||s+$', '', title)
+
         title = title.replace('\u2013', '-')
         title = title.replace('\u2019', "'")
 
-        list_href_title.append((href, title))
+        version = re.search(r'([vV]\d+.*|Vol.*$|\d+\.\d+)', title)
+        if version:
+            version = version.group(1).strip()
+            title = re.sub(version, '', title)
+        else:
+            version = ''
+
+        title = re.sub(r'\b(19|20)\d{2}\b', '', title)
+        title = re.sub(r'\b\d+(st|nd|rd|th)\b', '', title)
+
+        title = re.sub(
+            r'\b\d{1,2}\s+(?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\w*\b', '', title)
+        title = re.sub(
+            r'''
+            \b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\b''', '', title, flags=re.IGNORECASE)
+
+        title = re.sub(r'^\s+|\s+$', '', title)
+
+        list_href_title.append((href, title, version))
     return list_href_title
 
 
@@ -66,7 +81,7 @@ async def get_download_links(links, file, client):
     """
 
     # Iterate through the links
-    for href, title in links:
+    for href, title, version in links:
         # Send a GET request to the link
         link_response = await client.get(href)
         # Parse the HTML content of the link
@@ -88,10 +103,9 @@ async def get_download_links(links, file, client):
                 for element in h1_elements:
                     if element.a:
                         if element.a['href'].startswith("https://controlc.com/") or \
-                            element.a['href'].startswith("https://www.file-upload.com/"):
+                                element.a['href'].startswith("https://www.file-upload.com/"):
                             download_link = element.a['href']
                             break
-
 
             # Check if the download link is a repetition
             if download_link:
@@ -99,6 +113,7 @@ async def get_download_links(links, file, client):
                 file.write(json.dumps({
                     "link": href,
                     "title": title,
+                    "version": version,
                     "download_link": download_link}) + '\n')
 
 
@@ -133,7 +148,8 @@ async def main() -> None:
                 break
 
             # Create a task to get the download links for each page
-            tasks.append(asyncio.create_task(get_download_links(page_links, f, client)))
+            tasks.append(asyncio.create_task(
+                get_download_links(page_links, f, client)))
 
             # Increment the page number
             page_number += 1
@@ -146,39 +162,3 @@ async def main() -> None:
 
 if __name__ == '__main__':
     asyncio.run(main())
-
-'''
-Documentation: 
-
-This code is a web scraper designed to extract download links for 
-software from the website www.vfxmed.com. 
-It begins by setting the base URL for the website and two patterns 
-for extracting links and for matching links that contain the string 
-"#comment-". It also initializes a flag to indicate when pagination 
-should stop and a set to store unique links.
-
-The extract_links function takes in a BeautifulSoup object and a set of 
-unique links, and extracts links from the soup object that match the 
-specified pattern and do not match the comment_pattern. It then modifies 
-the titles of the links to remove unwanted words, and yields a tuple of the 
-link and the modified title.
-
-The get_download_links function is an async function that takes in a list of 
-links and a file object. It iterates through the links, sending a GET request 
-to each one and parsing the HTML content with BeautifulSoup. It then finds the 
-content section of the page and extracts the download links from it. 
-It checks if each download link is a repetition using the check_repetition function, 
-and if it is not, writes it to the file in JSON format.
-
-The check_repetition function takes in a download link and checks if it 
-is already present in the unique_links set. If it is not, it adds it to 
-the set and returns False. If it is, it returns True.
-
-The main loop of the code begins by making a GET request to the base URL and 
-parsing the HTML content with BeautifulSoup. It then calls the extract_links 
-function to extract the links from the content and the get_download_links 
-function to write the download links to a file. It also checks the value of 
-the stop_paginating flag and the nav-previous element to determine when to 
-stop paginating and end the loop.
-
-'''
