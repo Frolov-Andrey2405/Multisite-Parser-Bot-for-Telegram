@@ -2,7 +2,6 @@ import json
 import re
 from bs4 import BeautifulSoup
 import asyncio
-from lxml import html
 import httpx
 
 # Set the base URL of the website
