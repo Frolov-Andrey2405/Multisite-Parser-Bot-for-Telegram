@@ -39,9 +39,11 @@ def search_vfx_title_on_blend(title_vfx: str, session: Session) -> str:
         return None
 
     product_title = product_div.find('h5').get_text().strip()
+    product_link = 'https://blendermarket.com' + product_div.find('a')['href']
 
     if title_compare_vfx_and_blend(product_title, title_vfx):
         print(product_title)
+        print(product_link)
 
 
 def main(vfx_titles: list[str]) -> None:
