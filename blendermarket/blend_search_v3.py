@@ -1,5 +1,5 @@
 from requests import Session
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 import Levenshtein
 import json
 
@@ -17,14 +17,29 @@ def give_titles_from_vfx_file():
     return titles
 
 
-def title_compare_vfx_and_blend(title_blend: str, title_vfx) -> str:
+def title_compare_with_blend(title_blend: str, title_vfx: str) -> str:
     word_distance = Levenshtein.distance(title_blend, title_vfx)
     if word_distance <= THRESHOLD:
         return True
     return False
 
 
-def search_vfx_title_on_blend(title_vfx: str, session: Session) -> str:
+def get_title_blend_product(product: Tag) -> str:
+    return product.find('h5').get_text().strip()
+
+
+def get_full_information_about_blend_product(title_product: str, product: Tag) -> dict:
+    product_link = 'https://blendermarket.com' + product.find('a')['href']
+    image_url = product.find('img')['src']
+
+    return {
+        'title': title_product, 
+        'product_link': product_link,
+        'url_image': image_url,
+    }
+
+
+def search_first_vfx_product_on_blend(title_vfx: str, session: Session) -> None|Tag:
     response = session.get(
         f'''
     https://blendermarket.com/search?utf8=%E2%9C%93&search%5Bq%5D={title_vfx}&button=
@@ -38,20 +53,25 @@ def search_vfx_title_on_blend(title_vfx: str, session: Session) -> str:
     if product_div is None:
         return None
 
-    product_title = product_div.find('h5').get_text().strip()
-    product_link = 'https://blendermarket.com' + product_div.find('a')['href']
-
-    if title_compare_vfx_and_blend(product_title, title_vfx):
-        print(product_title)
-        print(product_link)
+    return product_div
 
 
-def main(vfx_titles: list[str]) -> None:
-    with Session() as s:
-        for title in vfx_titles:
-            search_vfx_title_on_blend(title, s)
+def search_info_about_product(title: str, session: Session) -> dict|None:
+    product = search_first_vfx_product_on_blend(title, session)
+            
+    if product is not None:
+        title_blend = get_title_blend_product(product)
+
+        flag = title_compare_with_blend(title_blend, title)
+
+        if flag:
+            return get_full_information_about_blend_product(title_blend, product)
+
+    return None
 
 
 if __name__ == '__main__':
     vfx_titles = give_titles_from_vfx_file()
-    main(vfx_titles)
+    with Session() as s:
+        for title in vfx_titles:
+            search_info_about_product(title, s)
