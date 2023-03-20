@@ -1,4 +1,4 @@
-from requests import get, Session
+from requests import Session
 from bs4 import BeautifulSoup
 import Levenshtein
 import json
@@ -25,17 +25,25 @@ def title_compare_vfx_and_blend(title_blend: str, title_vfx) -> str:
 
 
 def search_vfx_title_on_blend(title_vfx: str, session: Session) -> str:
-    responce = session.get(f'https://blendermarket.com/search?utf8=%E2%9C%93&search%5Bq%5D={title_vfx}&button=')
-    responce_parser = BeautifulSoup(responce.content, 'html.parser')
-    product_div = responce_parser.find('div', class_="col-12 col-md-6 col-lg-3 mb-4")
+    response = session.get(
+        f'''
+    https://blendermarket.com/search?utf8=%E2%9C%93&search%5Bq%5D={title_vfx}&button=
+    '''
+    )
+
+    response_parser = BeautifulSoup(response.content, 'html.parser')
+    product_div = response_parser.find(
+        'div', class_="col-12 col-md-6 col-lg-3 mb-4")
 
     if product_div is None:
         return None
-    
+
     product_title = product_div.find('h5').get_text().strip()
+    product_link = 'https://blendermarket.com' + product_div.find('a')['href']
 
     if title_compare_vfx_and_blend(product_title, title_vfx):
         print(product_title)
+        print(product_link)
 
 
 def main(vfx_titles: list[str]) -> None:
