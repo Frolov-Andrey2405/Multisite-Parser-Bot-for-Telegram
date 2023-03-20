@@ -18,8 +18,8 @@ def give_titles_from_vfx_file():
 
 
 def title_compare_vfx_and_blend(title_blend: str, title_vfx) -> str:
-    distance = Levenshtein.distance(title_blend, title_vfx)
-    if distance <= THRESHOLD:
+    word_distance = Levenshtein.distance(title_blend, title_vfx)
+    if word_distance <= THRESHOLD:
         return True
     return False
 
