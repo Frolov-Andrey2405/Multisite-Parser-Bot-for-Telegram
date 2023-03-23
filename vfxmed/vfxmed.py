@@ -94,7 +94,7 @@ async def get_download_links(links, file, client):
             h3_elements = content_section.find_all('h3')
             for element in h3_elements:
                 if 'Filename:' in element.text and element.a:
-                    download_link = element.a['href']
+                    download_link = element.a.get('href')
                     break
 
             if not download_link:

@@ -224,10 +224,3 @@ async def parse_pages(mode_all=True) -> None:
                 for data in await asyncio.gather(*tasks):
                     data_insert_in_db(data, 'vfx', conn)
                 tasks.clear()
-
-        
-
-
-if __name__ == '__main__':
-    asyncio.run(parse_pages(mode_all=True))
-    #asyncio.run(parse_all_pages())
