@@ -34,8 +34,8 @@ def get_full_information_about_blend_product(title_product: str, product: Tag) -
 
     return {
         'title': title_product, 
-        'product_link': product_link,
-        'url_image': image_url,
+        'off_link': product_link,
+        'url_on_image': image_url,
     }
 
 
@@ -56,7 +56,7 @@ def search_first_vfx_product_on_blend(title_vfx: str, session: Session) -> None|
     return product_div
 
 
-def search_info_about_product(title: str, session: Session) -> dict|None:
+def search_info_about_blend_product(title: str, session: Session) -> dict|None:
     product = search_first_vfx_product_on_blend(title, session)
             
     if product is not None:
@@ -74,4 +74,4 @@ if __name__ == '__main__':
     vfx_titles = give_titles_from_vfx_file()
     with Session() as s:
         for title in vfx_titles:
-            search_info_about_product(title, s)
+            search_info_about_blend_product(title, s)

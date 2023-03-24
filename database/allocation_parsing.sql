@@ -7,7 +7,7 @@ CREATE TABLE
         id INT PRIMARY KEY AUTO_INCREMENT,
         link VARCHAR (400) NOT NULL UNIQUE,
         download_link VARCHAR(400) NOT NULL UNIQUE,
-        data_created DATE NOT NULL DEFAULT (CURRENT_TIMESTAMP)
+        data_created DATETIME NOT NULL DEFAULT (CURRENT_TIMESTAMP)
     );
 
 CREATE TABLE
@@ -15,7 +15,7 @@ CREATE TABLE
         id INT PRIMARY KEY AUTO_INCREMENT,
         off_link VARCHAR(400) NOT NULL UNIQUE, 
         url_on_image VARCHAR(400) DEFAULT NULL,
-        data_created DATE NOT NULL DEFAULT (CURRENT_TIMESTAMP)
+        data_created DATETIME NOT NULL DEFAULT (CURRENT_TIMESTAMP)
     );
 
 CREATE TABLE
@@ -25,7 +25,7 @@ CREATE TABLE
         Vfx_id INT DEFAULT NULL,
         Blend_id INT DEFAULT NULL,
         addon_version VARCHAR(255) DEFAULT NULL,
-        data_created DATE NOT NULL DEFAULT (CURRENT_TIMESTAMP),
+        data_created DATETIME NOT NULL DEFAULT (CURRENT_TIMESTAMP),
         FOREIGN KEY (Vfx_id) REFERENCES Vfx(id) ON DELETE CASCADE,
         FOREIGN KEY (Blend_id) REFERENCES Blend(id) ON DELETE SET NULL,
         UNIQUE (product_name, addon_version)
